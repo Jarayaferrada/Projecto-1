@@ -1,0 +1,98 @@
+##### Configurar BGP #####
+
+router bgp <ID>
+neighbor <IP destino> remote-as <ID destino>
+network <Red contigua> mask <Máscara de red contigua>
+
+EJ:
+router bgp 64501
+neighbor 169.255.5.1 remote-as 64502
+network 169.255.5.0 mask 255.255.255.192
+
+
+##### FRAME RELAY #####
+interface Serial0/0/0
+encapsulation frame-relay
+frame-relay map ip <IP Destino> <DLCI Local> broadcast
+
+EJ:
+interface se0/0/0
+enc frame-relay
+frame-relay map ip 10.10.144.2 201 broadcast
+ip address 10.10.144.1 255.255.255.252
+no shut
+
+
+### Redistribuir OSPF sobre EIGRP ###
+router eigrp 10
+redistribute ospf 20 metric 10000 100 255 1 1500
+
+### Redistribuir EIGRP sobre OSPF ###
+router ospf 20
+redistribute eigrp 10 subnets
+redistribute static
+
+
+### Usar puerto de SW capa3 como switch normal ###
+switchport trunk encapsulation dot1q
+switchport mode trunk
+
+
+
+##### ETHER CHANNEL #####
+
+int range g1/0/1-2
+channel-group 1 mode active
+channel-protocol lacp
+switchport trunk encapsulation dot1q <<<-- SW Capa 3
+switchport mode trunk
+switchport trunk allowed vlan all
+
+### Activa grupo EtherChannel para tránsito trunk ###
+## Encapsulación sólo se usa en SW capa 3 ##
+int port 1
+sw trunk enc dot1q
+sw mode trunk
+
+
+#####  HSRP #####
+
+int <<VLAN>>
+ip add <<IpInterfaz>> <<MascaraInterfaz>>
+standby 1 ip <<IpGatewayVirtual>>
+standby 1 priority 200				<<<-- Establece la prioridad como secundaria
+
+EJ:
+int vlan 5
+ip add 192.168.5.3 255.255.255.0
+standby 1 ip 192.168.5.1
+
+int vlan 7
+ip add 192.168.7.3 255.255.255.0
+standby 1 ip 192.168.7.1
+standby 1 priority 200
+
+
+##### SPANNING TREE #####
+spanning-tree vlan <<NrpVLAN>> root <<Primary o Secondary>>
+
+EJ:
+spanning-tree vlan 5 root primary
+spanning-tree vlan 7 root secondary
+
+
+##### ACCESS LIST #####
+access-list <<ID>> <<permit O deny>> <<DirecciónRed>> <<Wildcard>>
+
+EJ:
+access-list 1 permit 192.168.5.0 0.0.0.255
+
+
+##### NAT POOL #####
+## <<NombrePool>> Es cualquier nombe que se le quiera dar al pool de IPs ##
+ip nat pool <<NombrePool>> <<IPinicial>> <<IPfinal>> netmask <<MascDeRed>>
+ip nat inside source list <<IDAccessList>> pool <<NombrePool>>
+
+EJ:
+ip nat pool RVLAN5 169.255.5.67 169.255.5.126 netmask 255.255.255.192
+ip nat inside source list 1 pool RVLAN5
